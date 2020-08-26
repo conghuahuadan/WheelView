@@ -24,7 +24,7 @@ import android.view.ViewConfiguration;
 import android.view.animation.LinearInterpolator;
 import android.widget.OverScroller;
 
-import com.chhd.wheelview.R;
+import com.andy.wheelview.R;
 
 public class WheelView extends View implements IWheelViewSetting {
 
@@ -104,6 +104,7 @@ public class WheelView extends View implements IWheelViewSetting {
     private int maxScrollOffset; // 最大滚动距离
     private int touchSlop = 8; // 断定移动事件的距离
     private boolean hasMove;
+    private int horizontalOffset;
 
     public WheelView(Context context) {
         super(context);
@@ -680,6 +681,7 @@ public class WheelView extends View implements IWheelViewSetting {
             //show text align center_horizontal
             startX = (getWidth() - w) / 2.0f + offsetX;
         }
+        startX += horizontalOffset;
         float centerX = getWidth() / 2.0f;
         float centerY = rect.exactCenterY();
         float baseLine = centerY + textBaseLine;
@@ -703,6 +705,10 @@ public class WheelView extends View implements IWheelViewSetting {
         canvas.concat(matrix);
         canvas.drawText(text, startX, baseLine, textPaint);
         canvas.restore();
+    }
+
+    public void setHorizontalOffset(int offset) {
+        this.horizontalOffset = offset;
     }
 
     private int calAlpha(Rect rect) {

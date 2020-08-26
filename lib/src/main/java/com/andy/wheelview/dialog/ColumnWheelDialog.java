@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.andy.wheelview.base.IWheel;
 import com.andy.wheelview.base.WheelItemView;
-import com.chhd.wheelview.R;
+import com.andy.wheelview.R;
 
 public class ColumnWheelDialog<T0 extends IWheel, T1 extends IWheel, T2 extends IWheel, T3 extends IWheel, T4 extends IWheel> extends Dialog {
 

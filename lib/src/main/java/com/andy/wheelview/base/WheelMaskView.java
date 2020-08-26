@@ -9,7 +9,7 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
 
-import com.chhd.wheelview.R;
+import com.andy.wheelview.R;
 
 public class WheelMaskView extends View {
 
