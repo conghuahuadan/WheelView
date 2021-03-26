@@ -21,8 +21,8 @@ public class DateItem implements IWheel {
     public @interface DateType {
     }
 
-    private int type;
-    private int value;
+    public int type;
+    public int value;
 
     public DateItem() {
     }
@@ -44,12 +44,20 @@ public class DateItem implements IWheel {
         this.value = value;
     }
 
+    public int getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        this.type = type;
+    }
+
     @Override
     public String getShowText() {
         return String.format(Locale.CHINA, getFormatStringByType(), (value < 10 ? "0" + value : "" + value));
     }
 
-    private String getFormatStringByType() {
+    public String getFormatStringByType() {
         String result = "";
         switch (type) {
             case TYPE_YEAR:

@@ -15,14 +15,14 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.andy.wheelview.R;
+import com.andy.wheelview.base.WheelItemView;
+import com.andy.wheelview.base.WheelView;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Calendar;
 import java.util.Date;
-
-import com.andy.wheelview.R;
-import com.andy.wheelview.base.WheelView;
-import com.andy.wheelview.base.WheelItemView;
 
 public class DateTimeWheelDialog extends Dialog {
 
@@ -310,7 +310,10 @@ public class DateTimeWheelDialog extends Dialog {
         monthWheelItemView.setOnSelectedListener(new WheelView.OnSelectedListener() {
             @Override
             public void onSelected(Context context, int selectedIndex) {
-                selectedCalendar.set(Calendar.MONTH, monthItems[selectedIndex].getValue() - 1);
+                int current = selectedCalendar.get(Calendar.MONTH);
+                int target = monthItems[selectedIndex].getValue() - 1;
+                int offset = target - current;
+                selectedCalendar.add(Calendar.MONTH, offset);
                 if (showConfig > SHOW_YEAR_MONTH)
                     onMonthChanged();
             }

@@ -81,6 +81,8 @@ public class WheelView extends View implements IWheelViewSetting {
      * the height of every item
      */
     private int itemHeight = 0;
+    private float downX = 0.0f;
+    private float downY = 0.0f;
     private float lastX = 0.0f;
     private float lastY = 0.0f;
     private int[] calculateResult = new int[2];//for saving the calculate result.
@@ -252,6 +254,9 @@ public class WheelView extends View implements IWheelViewSetting {
                     isAnimatorCanceledForwardly = true;
                     animator.cancel();
                 }
+                downX = event.getX();
+                downY = event.getY();
+
                 lastX = event.getX();
                 lastY = event.getY();
 
@@ -270,7 +275,7 @@ public class WheelView extends View implements IWheelViewSetting {
                 int distanceX = (int) (currentX - lastX);
                 int distanceY = (int) (currentY - lastY);
 
-                if (Math.abs(distanceY) > Math.abs(distanceX) && Math.abs(distanceY) > touchSlop) {
+                if (Math.abs(currentY - downY) > touchSlop) {
                     hasMove = true;
                 }
 
@@ -306,6 +311,7 @@ public class WheelView extends View implements IWheelViewSetting {
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
+                Log.i(TAG, "onTouchEvent111: " + hasMove);
                 if (!hasMove) {
                     //it's a click event, do it
                     executeClickEvent(event.getX(), event.getY());
@@ -317,7 +323,6 @@ public class WheelView extends View implements IWheelViewSetting {
                 velocityTracker.computeCurrentVelocity(velocityUnits, mMaximumVelocity);
                 float currentVelocity = velocityTracker.getYVelocity();
                 recycleVelocityTracker();
-                Log.i(TAG, "onTouchEvent: " + mMinimumVelocity + ", " + mMaximumVelocity);
 
                 final int tempFlingDirection = currentVelocity == 0 ? 0 : (currentVelocity < 0 ? -1 : 1);
                 if (Math.abs(currentVelocity) >= mMinimumVelocity) { // 惯性滑动
@@ -340,6 +345,7 @@ public class WheelView extends View implements IWheelViewSetting {
                             0 - selectedIndex * itemHeight
                     );
                 }
+                Log.i(TAG, "onTouchEvent222: " + (Math.abs(currentVelocity) >= mMinimumVelocity));
                 break;
 
         }

@@ -17,19 +17,24 @@ import android.widget.LinearLayout;
 import com.andy.wheelview.base.WheelItemView;
 import com.andy.wheelview.base.WheelView;
 import com.andy.wheelview.dialog.DateItem;
-import com.andy.wheelview.dialog.DateTimeWheelDialog;
 import com.blankj.utilcode.util.SizeUtils;
 
+import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 public class DateSelectDialog extends AppCompatDialogFragment {
 
-    public static DateSelectDialog newInstance() {
+    public static DateSelectDialog newInstance(Long millis) {
         DateSelectDialog dialog = new DateSelectDialog();
         Bundle args = new Bundle();
+        if (millis != null) {
+            args.putLong("millis", millis);
+        }
         dialog.setArguments(args);
         return dialog;
     }
@@ -67,25 +72,28 @@ public class DateSelectDialog extends AppCompatDialogFragment {
     private DateItem[] yearItems;
     private DateItem[] monthItems;
     private DateItem[] dayItems;
-    private DateItem[] hourItems;
-    private DateItem[] minuteItems;
 
     private Calendar startCalendar = Calendar.getInstance();
     private Calendar endCalendar = Calendar.getInstance();
     private Calendar selectedCalendar = Calendar.getInstance();
-    private DateTimeWheelDialog.OnClickCallBack cancelCallBack = null;
-    private DateTimeWheelDialog.OnClickCallBack okCallBack = null;
 
     private int showCount = 5;
     private int itemVerticalSpace = 32;
     private boolean isViewInitialized = false;
     private boolean keepLastSelected = false;
     private int showConfig = SHOW_YEAR_MONTH_DAY_HOUR_MINUTE;
+    private OnDateSelectedCallback callback;
+    private long millis;
+
+    public void setOnDateSelectedCallback(OnDateSelectedCallback callback) {
+        this.callback = callback;
+    }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        callback = (OnDateSelectedCallback) getArguments().getSerializable("callback");
+        millis = getArguments().getLong("millis", -1);
     }
 
     @NonNull
@@ -113,7 +121,7 @@ public class DateSelectDialog extends AppCompatDialogFragment {
     }
 
     private void initView() {
-        setShowCount(7);
+        setShowCount(5);
         setItemVerticalSpace(SizeUtils.dp2px(24));
 
         int lineColor = Color.parseColor("#605b81e6");
@@ -148,18 +156,57 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         configShowUI();
 
         Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.YEAR, 2015);
-        calendar.set(Calendar.MONTH, 0);
-        calendar.set(Calendar.DAY_OF_MONTH, 1);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        Date startDate = calendar.getTime();
-        calendar = Calendar.getInstance();
-        calendar.set(Calendar.YEAR, 2020);
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 0);
         Date endDate = calendar.getTime();
+
+        calendar.add(Calendar.DAY_OF_MONTH, -(days - 1));
+        Date startDate = calendar.getTime();
 
         setDateArea(startDate, endDate, true);
 
+        Calendar current = Calendar.getInstance();
+        current.setTime(endDate);
+        if (millis > 0 && millis < current.getTimeInMillis()) {
+            current.setTimeInMillis(millis);
+        }
+        updateSelectedDate(new Date(current.getTimeInMillis()));
+
+//        Calendar calendar = Calendar.getInstance();
+//        calendar.set(Calendar.YEAR, 2015);
+//        calendar.set(Calendar.MONTH, 0);
+//        calendar.set(Calendar.DAY_OF_MONTH, 1);
+//        calendar.set(Calendar.HOUR_OF_DAY, 0);
+//        calendar.set(Calendar.MINUTE, 0);
+//        Date startDate = calendar.getTime();
+//        calendar = Calendar.getInstance();
+//        calendar.set(Calendar.YEAR, 2020);
+//        Date endDate = calendar.getTime();
+//
+//        setDateArea(startDate, endDate, true);
+//
+//        jumpToday();
+
+        getView().findViewById(R.id.tv_cancel).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                jumpToday();
+            }
+        });
+        getView().findViewById(R.id.tv_confirm).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (callback != null) {
+                    callback.onDateSelected(0);
+                }
+            }
+        });
+    }
+
+    private void jumpToday() {
         Calendar current = Calendar.getInstance();
         current.set(Calendar.MINUTE, 0);
         current.set(Calendar.SECOND, 0);
@@ -189,23 +236,22 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         int startYear = startCalendar.get(Calendar.YEAR);
         int endYear = endCalendar.get(Calendar.YEAR);
         int startMonth = startCalendar.get(Calendar.MONTH) + 1;
-        int endMonth = endCalendar.get(Calendar.MONTH) + 1;
         int startDay = startCalendar.get(Calendar.DAY_OF_MONTH);
-        int endDay = endCalendar.get(Calendar.DAY_OF_MONTH);
-        int startHour = startCalendar.get(Calendar.HOUR_OF_DAY);
-        int endHour = endCalendar.get(Calendar.HOUR_OF_DAY);
-        int startMinute = startCalendar.get(Calendar.MINUTE);
-        int endMinute = endCalendar.get(Calendar.MINUTE);
 
         yearItems = updateItems(DateItem.TYPE_YEAR, startYear, endYear);
-        monthItems = updateItems(DateItem.TYPE_MONTH, startMonth, endMonth);
+        monthItems = updateItems(DateItem.TYPE_MONTH, startMonth, MAX_MONTH);
         int dayActualMaximum = startCalendar.getActualMaximum(Calendar.DAY_OF_MONTH);
-        dayItems = updateItems(DateItem.TYPE_DAY, startDay, endDay);
-        hourItems = updateItems(DateItem.TYPE_HOUR, startHour, endHour);
-        minuteItems = updateItems(DateItem.TYPE_MINUTE, startMinute, endMinute);
+        dayItems = updateItems(DateItem.TYPE_DAY, startDay, dayActualMaximum);
         yearWheelItemView.setItems(yearItems);
         monthWheelItemView.setItems(monthItems);
         dayWheelItemView.setItems(dayItems);
+
+        getView().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                onYearChanged();
+            }
+        }, 0);
     }
 
     private DateItem[] updateItems(@DateItem.DateType int type, int startValue, int endValue) {
@@ -240,14 +286,19 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         int year = selectedCalendar.get(Calendar.YEAR);
         int month = selectedCalendar.get(Calendar.MONTH);
         int day = selectedCalendar.get(Calendar.DAY_OF_MONTH);
-        int hour = selectedCalendar.get(Calendar.HOUR_OF_DAY);
-        int minute = selectedCalendar.get(Calendar.MINUTE);
         int index = findSelectedIndexByValue(yearItems, year);
         yearWheelItemView.setSelectedIndex(index, false);
         index = findSelectedIndexByValue(monthItems, month + 1);
         monthWheelItemView.setSelectedIndex(index, false);
         index = findSelectedIndexByValue(dayItems, day);
         dayWheelItemView.setSelectedIndex(index, false);
+
+//        getView().postDelayed(new Runnable() {
+//            @Override
+//            public void run() {
+//                onYearChanged();
+//            }
+//        }, 0);
     }
 
     private void initOnScrollListener() {
@@ -262,7 +313,10 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         monthWheelItemView.setOnSelectedListener(new WheelView.OnSelectedListener() {
             @Override
             public void onSelected(Context context, int selectedIndex) {
-                selectedCalendar.set(Calendar.MONTH, monthItems[selectedIndex].getValue() - 1);
+                int current = selectedCalendar.get(Calendar.MONTH);
+                int target = monthItems[selectedIndex].getValue() - 1;
+                int offset = target - current;
+                selectedCalendar.add(Calendar.MONTH, offset);
                 if (showConfig > SHOW_YEAR_MONTH)
                     onMonthChanged();
             }
@@ -277,6 +331,8 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         });
     }
 
+    private int days = 180;
+
     private void onYearChanged() {
         //update month list
         int startYear = startCalendar.get(Calendar.YEAR);
@@ -288,7 +344,10 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         int tempIndex = -1;
         int lastSelectedIndex = -1;
         int startValue, endValue;
-        if (isSameValue(selectedYear, startYear)) {
+        if (startYear == endYear) { // 开始日期和结束日期是同一年
+            startValue = startMonth;
+            endValue = endMonth;
+        } else if (isSameValue(selectedYear, startYear)) {
             startValue = startMonth;
             endValue = MAX_MONTH;
         } else if (isSameValue(selectedYear, endYear)) {
@@ -308,7 +367,7 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         }
         int newSelectedIndex = keepLastSelected ? (lastSelectedIndex == -1 ? 0 : lastSelectedIndex) : 0;
         monthWheelItemView.setItems(monthItems);
-        monthWheelItemView.setSelectedIndex(newSelectedIndex);
+        monthWheelItemView.setSelectedIndex(newSelectedIndex, false);
     }
 
     private void onMonthChanged() {
@@ -345,7 +404,12 @@ public class DateSelectDialog extends AppCompatDialogFragment {
         }
         int newSelectedIndex = keepLastSelected ? (lastSelectedIndex == -1 ? 0 : lastSelectedIndex) : 0;
         dayWheelItemView.setItems(dayItems);
-        dayWheelItemView.setSelectedIndex(newSelectedIndex);
+        dayWheelItemView.setSelectedIndex(newSelectedIndex, false);
+    }
+
+    private String calendarToString(Calendar calendar) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        return format.format(calendar.getTime());
     }
 
     private void onDayChanged() {
@@ -375,56 +439,6 @@ public class DateSelectDialog extends AppCompatDialogFragment {
             startValue = MIN_HOUR;
             endValue = MAX_HOUR;
         }
-        hourItems = new DateItem[endValue - startValue + 1];
-        for (int i = startValue; i <= endValue; i++) {
-            tempIndex++;
-            hourItems[tempIndex] = new DateItem(DateItem.TYPE_HOUR, i);
-            if (isSameValue(selectedHour, i)) {
-                lastSelectedIndex = tempIndex;
-            }
-        }
-        int newSelectedIndex = keepLastSelected ? (lastSelectedIndex == -1 ? 0 : lastSelectedIndex) : 0;
-    }
-
-    private void onHourChanged() {
-        //update minute list
-        int startYear = startCalendar.get(Calendar.YEAR);
-        int endYear = endCalendar.get(Calendar.YEAR);
-        int selectedYear = selectedCalendar.get(Calendar.YEAR);
-        int startMonth = startCalendar.get(Calendar.MONTH) + 1;
-        int endMonth = endCalendar.get(Calendar.MONTH) + 1;
-        int selectedMonth = selectedCalendar.get(Calendar.MONTH) + 1;
-        int startDay = startCalendar.get(Calendar.DAY_OF_MONTH);
-        int endDay = endCalendar.get(Calendar.DAY_OF_MONTH);
-        int selectedDay = selectedCalendar.get(Calendar.DAY_OF_MONTH);
-        int startHour = startCalendar.get(Calendar.HOUR_OF_DAY);
-        int endHour = endCalendar.get(Calendar.HOUR_OF_DAY);
-        int selectedHour = selectedCalendar.get(Calendar.HOUR_OF_DAY);
-        int startMinute = startCalendar.get(Calendar.MINUTE);
-        int endMinute = endCalendar.get(Calendar.MINUTE);
-        int selectedMinute = selectedCalendar.get(Calendar.MINUTE);
-        int tempIndex = -1;
-        int lastSelectedIndex = -1;
-        int startValue, endValue;
-        if (isSameValue(selectedYear, startYear) && isSameValue(selectedMonth, startMonth) && isSameValue(selectedDay, startDay) && isSameValue(selectedHour, startHour)) {
-            startValue = startMinute;
-            endValue = MAX_MINUTE;
-        } else if (selectedYear == endYear && selectedMonth == endMonth && selectedDay == endDay && selectedHour == endHour) {
-            startValue = MIN_MINUTE;
-            endValue = endMinute;
-        } else {
-            startValue = MIN_MINUTE;
-            endValue = MAX_MINUTE;
-        }
-        minuteItems = new DateItem[endValue - startValue + 1];
-        for (int i = startValue; i <= endValue; i++) {
-            tempIndex++;
-            minuteItems[tempIndex] = new DateItem(DateItem.TYPE_MINUTE, i);
-            if (isSameValue(selectedMinute, i)) {
-                lastSelectedIndex = tempIndex;
-            }
-        }
-        int newSelectedIndex = keepLastSelected ? (lastSelectedIndex == -1 ? 0 : lastSelectedIndex) : 0;
     }
 
     private int findSelectedIndexByValue(DateItem[] items, int value) {
@@ -440,5 +454,10 @@ public class DateSelectDialog extends AppCompatDialogFragment {
 
     private boolean isSameValue(int value1, int value2) {
         return value1 == value2;
+    }
+
+    public interface OnDateSelectedCallback extends Serializable {
+
+        void onDateSelected(long millis);
     }
 }
